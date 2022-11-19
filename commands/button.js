@@ -1,3 +1,5 @@
+const api = "http://localhost:3001/api/rust-plus";
+
 const {
   MessageButton,
   MessageActionRow,
@@ -5,7 +7,8 @@ const {
   MessageEmbed,
 } = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
-
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("add_button")
@@ -37,35 +40,38 @@ module.exports = {
           .setLabel("Turn Off")
           .setStyle("DANGER")
       );
+    const file = new MessageAttachment("./assets/smart.switch.png");
+
+    const messageEmbed = new MessageEmbed()
+      .setImage("attachment://smart.switch.png")
+      .setTitle("State")
+      .setDescription("?");
 
     const collector = interaction.channel.createMessageComponentCollector({});
     collector.on("collect", async (i) => {
       const id = interaction.options.getInteger("entity_id");
       if (id.toString() === i.customId.toString().slice(8)) {
         if (i.customId.startsWith("turn_on_")) {
-          await fetch(
-            "http://localhost:3333/rustPlus/turnSmartSwitchOn?id=" + id
-          );
+          await fetch(api + "/turnSmartSwitchOn?id=" + id);
+          messageEmbed.setDescription("On");
         } else if (i.customId.startsWith("turn_off")) {
-          await fetch(
-            "http://localhost:3333/rustPlus/turnSmartSwitchOff?id=" + id
-          );
+          await fetch(api + "/turnSmartSwitchOff?id=" + id);
+          messageEmbed.setDescription("Off");
         }
-        i.deferUpdate();
+
+        await i.update({
+          components: [row1],
+          embeds: [messageEmbed],
+        });
       }
     });
-
-    const file = new MessageAttachment("./assets/smart.switch.png");
-    const exampleEmbed = new MessageEmbed().setImage(
-      "attachment://smart.switch.png"
-    );
 
     const name = interaction.options.getString("entity_name");
 
     await interaction.reply({
       content: name,
       components: [row1],
-      embeds: [exampleEmbed],
+      embeds: [messageEmbed],
       files: [file],
     });
   },
